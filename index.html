@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,13 +10,22 @@
   <main class="app-container">
     <!-- Header -->
     <header class="app-header">
+      <div class="header-top-bar">
+        <span class="header-pill">Semester Planner</span>
+        <button type="button" id="theme-toggle" class="btn-theme-toggle" aria-label="Toggle theme" title="Toggle light/dark theme">
+          <span class="theme-icon" aria-hidden="true">☀️</span>
+          <span class="theme-text">Light</span>
+        </button>
+      </div>
       <h1 class="app-title">Student Task Planner</h1>
-      <p class="app-subtitle">Track course assignments, upcoming deadlines, and deliverables.</p>
+      <p class="app-subtitle">Track course assignments, upcoming deadlines, and academic deliverables.</p>
     </header>
 
-    <!-- Add Task Form -->
+    <!-- Add Task Form Card -->
     <section class="card form-card" aria-labelledby="form-heading">
-      <h2 id="form-heading" class="section-title">Add Assignment</h2>
+      <div class="card-header">
+        <h2 id="form-heading" class="section-title">New Assignment</h2>
+      </div>
       <form id="task-form" class="task-form" novalidate>
         <div class="form-group form-group-title">
           <label for="task-title">Assignment Title</label>
@@ -55,17 +64,19 @@
 
         <div class="form-group form-group-btn">
           <button type="submit" id="add-task-btn" class="btn btn-primary">
-            Add Task
+            <span class="btn-text">Add Assignment</span>
           </button>
         </div>
       </form>
       <div id="form-error" class="form-error" aria-live="polite"></div>
     </section>
 
-    <!-- Task List & Filters -->
+    <!-- Task List & Filters Card -->
     <section class="card list-card" aria-labelledby="list-heading">
       <div class="list-toolbar">
-        <h2 id="list-heading" class="section-title">Assignments</h2>
+        <div class="toolbar-title-wrap">
+          <h2 id="list-heading" class="section-title">Assignments</h2>
+        </div>
         <nav class="filter-group" aria-label="Filter assignments">
           <button type="button" class="filter-btn active" data-filter="all" aria-pressed="true">
             All <span class="filter-count" id="count-all">0</span>
@@ -80,12 +91,13 @@
       </div>
 
       <ul id="task-list" class="task-list" aria-label="Assignment list">
-        <!-- Dynamic list items will be injected by script.js -->
+        <!-- Dynamic list items injected by script.js -->
       </ul>
 
       <div id="empty-state" class="empty-state">
+        <div class="empty-icon-wrap" aria-hidden="true">📋</div>
         <p class="empty-title">No assignments found</p>
-        <p class="empty-desc">There are no tasks matching the selected view. Add a new assignment above.</p>
+        <p class="empty-desc">There are no tasks matching the selected view. Add a new assignment above to get started.</p>
       </div>
     </section>
   </main>

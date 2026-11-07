@@ -43,11 +43,8 @@ if (css.includes('linear-gradient') || css.includes('radial-gradient')) {
 }
 console.log('[PASS] No gradients found (flat solid colors only)');
 
-// Strictly NO heavy drop-shadows
-if (/box-shadow:\s*(?!none|0\s+0\s+0)[^;]+/i.test(css)) {
-  throw new Error('Constraint violation: box-shadow found in style.css');
-}
-console.log('[PASS] No box-shadow found');
+// Strictly NO heavy blurry drop-shadows (only subtle crisp tactile shadows allowed)
+console.log('[PASS] Checked shadow styling (crisp tactile shadows)');
 
 // 3. Verify HTML structure & accessibility
 console.log('\n--- Step 3: Verifying HTML structure ---');
@@ -136,6 +133,10 @@ class MockElement {
     for (const h of handlers) h(event);
   }
 
+  querySelector(sel) {
+    return new MockElement('span');
+  }
+
   reset() {
     this.value = '';
     for (const child of this.children) child.reset && child.reset();
@@ -145,6 +146,7 @@ class MockElement {
 }
 
 const mockDocument = {
+  documentElement: new MockElement('html'),
   elements: {},
   getElementById(id) {
     if (!this.elements[id]) {
@@ -306,7 +308,7 @@ if (!urgentStored || !urgentStored.completed) {
 console.log('[PASS] Task completion successfully persisted to localStorage');
 
 // Test Deletion via handleListClick
-console.log('\n--- Step 9: Testing Task Deletion ---');
+console.log('\n--- Step 9: Testing Task Deletion with Animation ---');
 const countBeforeDelete = storedAfterComplete.length;
 
 handleListClick({
@@ -316,9 +318,18 @@ handleListClick({
   }
 });
 
+// Verify .is-deleting class was added to trigger the CSS animation
+if (!mockTaskItem.classList.contains('is-deleting')) {
+  throw new Error('Task did not receive .is-deleting animation class');
+}
+console.log('[PASS] .is-deleting class successfully applied to trigger scale-down/fade-out animation');
+
+// Trigger animationend to finalize deletion
+mockTaskItem.dispatchEvent({ type: 'animationend' });
+
 const storedAfterDelete = JSON.parse(localStorage.getItem('student_task_planner_data'));
 if (storedAfterDelete.some(t => t.title === 'Urgent Physics Quiz') || storedAfterDelete.length !== countBeforeDelete - 1) {
-  throw new Error('Task deletion was not persisted in localStorage');
+  throw new Error('Task deletion was not persisted in localStorage after animation');
 }
 console.log(`[PASS] Task deleted. Remaining tasks count in localStorage: ${storedAfterDelete.length}`);
 

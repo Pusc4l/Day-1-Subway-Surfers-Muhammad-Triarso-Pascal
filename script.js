@@ -1,16 +1,17 @@
 /**
  * Student Task Planner - script.js
  * 
- * A clean, beginner-friendly vanilla JavaScript application to manage
- * university course assignments, deadlines, and completion statuses.
+ * Premium Vanilla JavaScript task planner with smooth micro-interactions,
+ * auto-sorting (closest due date first), filtering, and localStorage persistence.
  */
 
 // =============================================================================
-// Constants & State
+// Constants & Application State
 // =============================================================================
 const STORAGE_KEY = 'student_task_planner_data';
+const THEME_STORAGE_KEY = 'student_task_planner_theme';
 
-// Initial sample data loaded only when the user opens the application for the very first time.
+// Initial sample data loaded when opening the application for the very first time
 const INITIAL_SAMPLE_TASKS = [
   {
     id: 'sample-1',
@@ -38,12 +39,12 @@ const INITIAL_SAMPLE_TASKS = [
   }
 ];
 
-// In-memory application state
 let tasks = [];
 let currentFilter = 'all'; // 'all' | 'pending' | 'completed'
+let lastAddedTaskId = null; // Tracks newly added task for entrance slide-in animation
 
 // =============================================================================
-// DOM Elements
+// DOM References
 // =============================================================================
 const taskForm = document.getElementById('task-form');
 const titleInput = document.getElementById('task-title');
@@ -59,40 +60,60 @@ const countAllEl = document.getElementById('count-all');
 const countPendingEl = document.getElementById('count-pending');
 const countCompletedEl = document.getElementById('count-completed');
 
+const themeToggleBtn = document.getElementById('theme-toggle');
+
 // =============================================================================
 // Local Storage Operations
 // =============================================================================
-
-/**
- * Loads tasks from localStorage.
- * If no stored data exists, populates the planner with sample tasks.
- * Returns an array of task objects.
- */
 function loadTasks() {
   try {
     const rawData = localStorage.getItem(STORAGE_KEY);
     if (rawData === null) {
-      // First visit: use sample tasks and persist them
       saveTasks(INITIAL_SAMPLE_TASKS);
       return [...INITIAL_SAMPLE_TASKS];
     }
     const parsed = JSON.parse(rawData);
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    console.error('Failed to parse tasks from localStorage:', error);
+    console.error('Failed to parse localStorage data:', error);
     return [];
   }
 }
 
-/**
- * Saves current task array to localStorage.
- */
 function saveTasks(tasksToSave = tasks) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasksToSave));
   } catch (error) {
-    console.error('Failed to save tasks to localStorage:', error);
+    console.error('Failed to save to localStorage:', error);
   }
+}
+
+// =============================================================================
+// Theme Switcher Logic
+// =============================================================================
+function initTheme() {
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeUI(savedTheme);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const activeTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', activeTheme);
+      localStorage.setItem(THEME_STORAGE_KEY, activeTheme);
+      updateThemeUI(activeTheme);
+    });
+  }
+}
+
+function updateThemeUI(theme) {
+  if (!themeToggleBtn) return;
+  const isDark = theme === 'dark';
+  const iconEl = themeToggleBtn.querySelector('.theme-icon');
+  const textEl = themeToggleBtn.querySelector('.theme-text');
+  
+  if (iconEl) iconEl.textContent = isDark ? '☀️' : '🌙';
+  if (textEl) textEl.textContent = isDark ? 'Light' : 'Dark';
 }
 
 // =============================================================================
@@ -100,33 +121,29 @@ function saveTasks(tasksToSave = tasks) {
 // =============================================================================
 
 /**
- * Auto-Sorting rule:
- * - Pending tasks appear with the closest due date at the top (ascending order).
- * - When in the 'All' view, pending tasks are prioritized at the top,
- *   followed by completed tasks.
+ * Filters tasks by active tab and auto-sorts pending tasks
+ * so that the closest due date appears at the top.
  */
 function getFilteredAndSortedTasks() {
-  // Step 1: Filter tasks by active tab
   let filtered = tasks.filter(task => {
     if (currentFilter === 'pending') return !task.completed;
     if (currentFilter === 'completed') return task.completed;
     return true; // 'all'
   });
 
-  // Step 2: Auto-Sort
   filtered.sort((a, b) => {
-    // If viewing 'All', keep pending tasks at the top
+    // When in 'all' view, pending tasks are prioritized at the top
     if (a.completed !== b.completed) {
       return a.completed ? 1 : -1;
     }
 
-    // Both are pending or both are completed: sort by closest due date first (ascending)
+    // Closest due date first (ascending)
     const dateComparison = a.dueDate.localeCompare(b.dueDate);
     if (dateComparison !== 0) {
       return dateComparison;
     }
 
-    // Tie-breaker: sort alphabetically by title
+    // Secondary sort: title alphabetical
     return a.title.localeCompare(b.title);
   });
 
@@ -134,13 +151,8 @@ function getFilteredAndSortedTasks() {
 }
 
 // =============================================================================
-// Date & Text Helpers
+// Date & Display Helpers
 // =============================================================================
-
-/**
- * Formats a "YYYY-MM-DD" string into a clean readable date (e.g. "Nov 9, 2026")
- * without timezone offset errors.
- */
 function formatDate(dateString) {
   if (!dateString) return '';
   const parts = dateString.split('-');
@@ -158,9 +170,6 @@ function formatDate(dateString) {
   });
 }
 
-/**
- * Computes whether a pending task is overdue or due today.
- */
 function getDeadlineStatus(dateString, isCompleted) {
   if (isCompleted || !dateString) return null;
 
@@ -183,32 +192,27 @@ function getDeadlineStatus(dateString, isCompleted) {
   return null;
 }
 
-/**
- * Prevents HTML injection by escaping user input.
- */
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-// =============================================================================
-// Render Function
-// =============================================================================
-
-/**
- * Re-renders the list of tasks, count badges, and empty state.
- */
-function render() {
-  const visibleTasks = getFilteredAndSortedTasks();
-
-  // Update counter badges
+function updateCounters() {
   const pendingCount = tasks.filter(t => !t.completed).length;
   const completedCount = tasks.filter(t => t.completed).length;
 
-  countAllEl.textContent = tasks.length;
-  countPendingEl.textContent = pendingCount;
-  countCompletedEl.textContent = completedCount;
+  if (countAllEl) countAllEl.textContent = tasks.length;
+  if (countPendingEl) countPendingEl.textContent = pendingCount;
+  if (countCompletedEl) countCompletedEl.textContent = completedCount;
+}
+
+// =============================================================================
+// Render Function
+// =============================================================================
+function render() {
+  const visibleTasks = getFilteredAndSortedTasks();
+  updateCounters();
 
   // Toggle empty state
   if (visibleTasks.length === 0) {
@@ -219,7 +223,7 @@ function render() {
 
   emptyState.classList.remove('is-visible');
 
-  // Build task items
+  // Render list items with entrance animation class if newly created
   taskList.innerHTML = visibleTasks.map(task => {
     const formattedDate = formatDate(task.dueDate);
     const deadlineStatus = getDeadlineStatus(task.dueDate, task.completed);
@@ -227,8 +231,10 @@ function render() {
       ? `<span class="task-status-badge ${deadlineStatus.className}">${deadlineStatus.text}</span>` 
       : '';
 
+    const isEntering = (task.id === lastAddedTaskId) ? 'is-entering' : '';
+
     return `
-      <li class="task-item ${task.completed ? 'is-completed' : ''}" data-id="${task.id}">
+      <li class="task-item ${task.completed ? 'is-completed' : ''} ${isEntering}" data-id="${task.id}">
         <div class="task-main">
           <label class="task-checkbox-wrap" title="${task.completed ? 'Mark as pending' : 'Mark as completed'}">
             <input 
@@ -258,14 +264,21 @@ function render() {
       </li>
     `;
   }).join('');
+
+  // Clear newly-added reference after render cycle
+  if (lastAddedTaskId) {
+    setTimeout(() => {
+      lastAddedTaskId = null;
+    }, 400);
+  }
 }
 
 // =============================================================================
-// Event Handlers
+// Event Handlers with Motion Support
 // =============================================================================
 
 /**
- * Handles adding a new task via the form.
+ * Handles adding a new task with slide-in animation.
  */
 function handleAddTask(event) {
   event.preventDefault();
@@ -275,7 +288,6 @@ function handleAddTask(event) {
   const course = courseInput.value.trim();
   const dueDate = dateInput.value;
 
-  // Basic validation
   if (!title || !course || !dueDate) {
     formError.textContent = 'Please fill out all fields (Title, Course, and Due Date).';
     return;
@@ -290,17 +302,19 @@ function handleAddTask(event) {
     createdAt: Date.now()
   };
 
+  // Flag this task so it receives the .is-entering slide-in animation
+  lastAddedTaskId = newTask.id;
+
   tasks.push(newTask);
   saveTasks();
   render();
 
-  // Reset form inputs
   taskForm.reset();
   titleInput.focus();
 }
 
 /**
- * Handles toggling completion status and deleting a task using event delegation.
+ * Handles toggling completion (animating strikethrough) and deletion (scale-down/fade-out).
  */
 function handleListClick(event) {
   const target = event.target;
@@ -311,25 +325,49 @@ function handleListClick(event) {
   const taskIndex = tasks.findIndex(t => t.id === taskId);
   if (taskIndex === -1) return;
 
-  // Toggle completion checkbox
+  // 1. Completion status toggle with smooth left-to-right strikethrough animation
   if (target.classList.contains('task-checkbox')) {
-    tasks[taskIndex].completed = target.checked;
+    const isChecked = target.checked;
+    tasks[taskIndex].completed = isChecked;
     saveTasks();
-    render();
+
+    // Toggle .is-completed directly on current DOM element to trigger the CSS strikethrough transition
+    taskItem.classList.toggle('is-completed', isChecked);
+    updateCounters();
+
+    // Re-render after the strikethrough line has completed its transition
+    setTimeout(() => {
+      render();
+    }, 280);
     return;
   }
 
-  // Delete task button
+  // 2. Delete task with scale-down and fade-out animation
   if (target.classList.contains('btn-delete')) {
-    tasks.splice(taskIndex, 1);
-    saveTasks();
-    render();
+    taskItem.classList.add('is-deleting');
+
+    let hasExecuted = false;
+    const finalizeDeletion = () => {
+      if (hasExecuted) return;
+      hasExecuted = true;
+      const freshIndex = tasks.findIndex(t => t.id === taskId);
+      if (freshIndex !== -1) {
+        tasks.splice(freshIndex, 1);
+        saveTasks();
+        render();
+      }
+    };
+
+    // Wait for the CSS animation to complete before removing from DOM/state
+    taskItem.addEventListener('animationend', finalizeDeletion, { once: true });
+    // Safety fallback timeout in case animationend is suppressed
+    setTimeout(finalizeDeletion, 320);
     return;
   }
 }
 
 /**
- * Handles switching the active filter tab ('all', 'pending', 'completed').
+ * Handles switching active filter tab ('all', 'pending', 'completed').
  */
 function handleFilterChange(event) {
   const button = event.target.closest('.filter-btn');
@@ -340,7 +378,6 @@ function handleFilterChange(event) {
 
   currentFilter = selectedFilter;
 
-  // Update active state in UI
   filterButtons.forEach(btn => {
     const isActive = btn.dataset.filter === currentFilter;
     btn.classList.toggle('active', isActive);
@@ -354,10 +391,9 @@ function handleFilterChange(event) {
 // Initialization
 // =============================================================================
 function init() {
-  // Load initial tasks from storage
+  initTheme();
   tasks = loadTasks();
 
-  // Attach event listeners
   taskForm.addEventListener('submit', handleAddTask);
   taskList.addEventListener('click', handleListClick);
 
@@ -366,9 +402,7 @@ function init() {
     filterContainer.addEventListener('click', handleFilterChange);
   }
 
-  // Initial render
   render();
 }
 
-// Run application on DOM ready
 document.addEventListener('DOMContentLoaded', init);
