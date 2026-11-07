@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Task Planner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <h1 class="app-title">Student Task Planner</h1>
+      <p class="app-subtitle">Track course assignments, upcoming deadlines, and deliverables.</p>
+    </header>
+
+    <!-- Add Task Form -->
+    <section class="card form-card" aria-labelledby="form-heading">
+      <h2 id="form-heading" class="section-title">Add Assignment</h2>
+      <form id="task-form" class="task-form" novalidate>
+        <div class="form-group form-group-title">
+          <label for="task-title">Assignment Title</label>
+          <input 
+            type="text" 
+            id="task-title" 
+            name="title" 
+            placeholder="e.g., Operating Systems Lab 2" 
+            required 
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group form-group-course">
+          <label for="task-course">Course Tag</label>
+          <input 
+            type="text" 
+            id="task-course" 
+            name="course" 
+            placeholder="e.g., CS 301" 
+            required 
+            maxlength="15"
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-group form-group-date">
+          <label for="task-date">Due Date</label>
+          <input 
+            type="date" 
+            id="task-date" 
+            name="dueDate" 
+            required
+          >
+        </div>
+
+        <div class="form-group form-group-btn">
+          <button type="submit" id="add-task-btn" class="btn btn-primary">
+            Add Task
+          </button>
+        </div>
+      </form>
+      <div id="form-error" class="form-error" aria-live="polite"></div>
+    </section>
+
+    <!-- Task List & Filters -->
+    <section class="card list-card" aria-labelledby="list-heading">
+      <div class="list-toolbar">
+        <h2 id="list-heading" class="section-title">Assignments</h2>
+        <nav class="filter-group" aria-label="Filter assignments">
+          <button type="button" class="filter-btn active" data-filter="all" aria-pressed="true">
+            All <span class="filter-count" id="count-all">0</span>
+          </button>
+          <button type="button" class="filter-btn" data-filter="pending" aria-pressed="false">
+            Pending <span class="filter-count" id="count-pending">0</span>
+          </button>
+          <button type="button" class="filter-btn" data-filter="completed" aria-pressed="false">
+            Completed <span class="filter-count" id="count-completed">0</span>
+          </button>
+        </nav>
+      </div>
+
+      <ul id="task-list" class="task-list" aria-label="Assignment list">
+        <!-- Dynamic list items will be injected by script.js -->
+      </ul>
+
+      <div id="empty-state" class="empty-state">
+        <p class="empty-title">No assignments found</p>
+        <p class="empty-desc">There are no tasks matching the selected view. Add a new assignment above.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
